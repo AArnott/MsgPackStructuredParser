@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "MsgPackStructuredParser": {
+      "commandName": "Project"
+    },
+    "Profile 2": {
+      "commandName": "Executable",
+      "executablePath": "cmd",
+      "commandLineArgs": " /c type c:\\\\temp\\\\extensionmetadata.mpack | dotnet C:\\git\\MsgPackStructuredParser\\MsgPackStructuredParser\\bin\\Debug\\net7.0\\MsgPackStructuredParser.dll -o c:\\temp\\testoutput.txt"
+    }
+  }
+}

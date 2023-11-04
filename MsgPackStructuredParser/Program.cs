@@ -124,7 +124,7 @@ class Converter
             {
                 string indent = new string(' ', level * 2);
                 // {Convert.ToHexString(msgpack)}
-                string line = $"{indent}{position,6} [{MessagePackCode.ToFormatName(typecode)}] {decoded}";
+                string line = $"{position,6} {indent}[{MessagePackCode.ToFormatName(typecode)}] {decoded}";
                 output.WriteLine(line);
             }
         }

@@ -1,10 +1,9 @@
-﻿using MessagePack;
-using Nerdbank.Streams;
-using System.Buffers;
+﻿using System.Buffers;
 using System.CommandLine;
 using System.CommandLine.Builder;
 using System.CommandLine.Parsing;
-using System.Diagnostics;
+using Nerdbank.MessagePack;
+using Nerdbank.Streams;
 
 RootCommand rootCommand = new("Converts msgpack to a precise textual rendering.");
 Option<string> inputArg = new(new[] { "--input", "-i" }, "The msgpack data file to read in. If omitted, STDIN will be used. Piping to STDIN may not work well from a Windows shell.");
@@ -60,7 +59,7 @@ class Converter
             switch (reader.NextMessagePackType)
             {
                 case MessagePackType.Unknown:
-                    reader.Skip();
+                    reader.Skip(new SerializationContext());
                     Log(before, reader, "unknown");
                     break;
                 case MessagePackType.Integer:
@@ -108,7 +107,7 @@ class Converter
                     }
                     break;
                 case MessagePackType.Extension:
-                    ExtensionHeader header = reader.ReadExtensionFormatHeader();
+                    ExtensionHeader header = reader.ReadExtensionHeader();
                     Log(before, reader, $"typecode={header.TypeCode}, length={header.Length}, {Convert.ToHexString(reader.ReadRaw(header.Length).ToArray())}");
                     break;
                 default:

@@ -6,19 +6,23 @@ using Nerdbank.MessagePack;
 using Nerdbank.Streams;
 
 RootCommand rootCommand = new("Converts msgpack to a precise textual rendering.");
-Option<string> inputArg = new(new[] { "--input", "-i" }, "The msgpack data file to read in. If omitted, STDIN will be used. Piping to STDIN may not work well from a Windows shell.");
-Option<string> outputArg = new(new[] { "--output", "-o" }, "The file to write text to. If omitted, STDOUT will be used.");
+Option<string> inputArg = new(["--input", "-i"], "The msgpack data file to read in. If omitted, STDIN will be used. Piping to STDIN may not work well from a Windows shell.");
+Option<string> outputArg = new(["--output", "-o"], "The file to write text to. If omitted, STDOUT will be used.");
+Option<bool> includePositionsOption = new(["--include-positions"], "Include byte positions for each token.");
 rootCommand.AddOption(inputArg);
 rootCommand.AddOption(outputArg);
+rootCommand.AddOption(includePositionsOption);
 rootCommand.SetHandler(
     async ctxt =>
     {
-        string? inputFile = ctxt.ParseResult.GetValueForOption<string>(inputArg);
-        string? outputFile = ctxt.ParseResult.GetValueForOption<string>(outputArg);
+        string? inputFile = ctxt.ParseResult.GetValueForOption(inputArg);
+        string? outputFile = ctxt.ParseResult.GetValueForOption(outputArg);
+        bool includePositions = ctxt.ParseResult.GetValueForOption(includePositionsOption);
         using Stream inputStream = inputFile is null ? Console.OpenStandardInput() : File.OpenRead(inputFile);
         using TextWriter outputWriter = outputFile is null ? Console.Out : new StreamWriter(File.Open(outputFile, FileMode.Create, FileAccess.Write, FileShare.Read));
         Converter converter = new()
         {
+            IncludePositions = includePositions,
         };
         await converter.ToTextWriterAsync(inputStream, outputWriter, ctxt.GetCancellationToken());
     });
@@ -30,6 +34,8 @@ await new CommandLineBuilder(rootCommand)
 
 class Converter
 {
+    public bool IncludePositions { get; init; }
+
     internal async Task ToTextWriterAsync(Stream input, TextWriter output, CancellationToken cancellationToken)
     {
         Sequence<byte> inputBuilder = new();
@@ -123,7 +129,8 @@ class Converter
             {
                 string indent = new string(' ', level * 2);
                 // {Convert.ToHexString(msgpack)}
-                string line = $"{position,6} {indent}[{MessagePackCode.ToFormatName(typecode)}] {decoded}";
+                string lineNumber = this.IncludePositions ? $"{position,6} " : string.Empty;
+                string line = $"{lineNumber}{indent}[{MessagePackCode.ToFormatName(typecode)}] {decoded}";
                 output.WriteLine(line);
             }
         }

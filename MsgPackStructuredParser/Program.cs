@@ -1,36 +1,30 @@
 ﻿using System.Buffers;
 using System.CommandLine;
-using System.CommandLine.Builder;
-using System.CommandLine.Parsing;
 using Nerdbank.MessagePack;
 using Nerdbank.Streams;
 
 RootCommand rootCommand = new("Converts msgpack to a precise textual rendering.");
-Option<string> inputArg = new(["--input", "-i"], "The msgpack data file to read in. If omitted, STDIN will be used. Piping to STDIN may not work well from a Windows shell.");
-Option<string> outputArg = new(["--output", "-o"], "The file to write text to. If omitted, STDOUT will be used.");
-Option<bool> includePositionsOption = new(["--include-positions"], "Include byte positions for each token.");
-rootCommand.AddOption(inputArg);
-rootCommand.AddOption(outputArg);
-rootCommand.AddOption(includePositionsOption);
-rootCommand.SetHandler(
-    async ctxt =>
+Option<string> inputArg = new("--input", "-i") { Description = "The msgpack data file to read in. If omitted, STDIN will be used. Piping to STDIN may not work well from a Windows shell." };
+Option<string> outputArg = new("--output", "-o") { Description = "The file to write text to. If omitted, STDOUT will be used." };
+Option<bool> includePositionsOption = new("--include-positions") { Description = "Include byte positions for each token." };
+rootCommand.Options.Add(inputArg);
+rootCommand.Options.Add(outputArg);
+rootCommand.Options.Add(includePositionsOption);
+rootCommand.SetAction(async (ParseResult parseResult, CancellationToken token) =>
+{
+    string? inputFile = parseResult.GetValue(inputArg);
+    string? outputFile = parseResult.GetValue(outputArg);
+    bool includePositions = parseResult.GetValue(includePositionsOption);
+    using Stream inputStream = inputFile is null ? Console.OpenStandardInput() : File.OpenRead(inputFile);
+    using TextWriter outputWriter = outputFile is null ? Console.Out : new StreamWriter(File.Open(outputFile, FileMode.Create, FileAccess.Write, FileShare.Read));
+    Converter converter = new()
     {
-        string? inputFile = ctxt.ParseResult.GetValueForOption(inputArg);
-        string? outputFile = ctxt.ParseResult.GetValueForOption(outputArg);
-        bool includePositions = ctxt.ParseResult.GetValueForOption(includePositionsOption);
-        using Stream inputStream = inputFile is null ? Console.OpenStandardInput() : File.OpenRead(inputFile);
-        using TextWriter outputWriter = outputFile is null ? Console.Out : new StreamWriter(File.Open(outputFile, FileMode.Create, FileAccess.Write, FileShare.Read));
-        Converter converter = new()
-        {
-            IncludePositions = includePositions,
-        };
-        await converter.ToTextWriterAsync(inputStream, outputWriter, ctxt.GetCancellationToken());
-    });
+        IncludePositions = includePositions,
+    };
+    await converter.ToTextWriterAsync(inputStream, outputWriter, token);
+});
 
-await new CommandLineBuilder(rootCommand)
-    .UseDefaults()
-    .Build()
-    .InvokeAsync(args);
+return await rootCommand.Parse(args).InvokeAsync();
 
 class Converter
 {

@@ -114,7 +114,7 @@ class Converter
                     break;
                 case MessagePackType.Extension:
                     ExtensionHeader header = reader.ReadExtensionHeader();
-                    Log(before, reader, $"typecode={header.TypeCode}, length={header.Length}, {Convert.ToHexString(reader.ReadRaw(header.Length).ToArray())}");
+                    Log(before, reader, $"typecode={header.TypeCode}, length={header.Length}, {Convert.ToHexString(reader.ReadRaw(header.Length).MsgPack.ToArray())}");
                     break;
                 default:
                     throw new NotSupportedException();
